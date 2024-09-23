@@ -1,0 +1,4 @@
+numpy
+fastdtw
+scipy
+matplotlib
