@@ -1,11 +1,35 @@
 import copy
 import json
-import random
 import numpy as np
-from dtaidistance import dtw
 import matplotlib.pyplot as plt
 from chromosome import Chromosome
 from generate_paths import generate_bezier_curve
+from scipy.spatial.distance import euclidean
+from fastdtw import fastdtw
+
+
+def sample_along_path(path, num_points):
+    distances = np.cumsum(
+        [0]
+        + [
+            np.linalg.norm(np.array(path[i]) - np.array(path[i - 1]))
+            for i in range(1, len(path))
+        ]
+    )
+    total_dist = distances[-1]
+    new_distances = np.linspace(0, total_dist, num_points)
+    sampled_path = []
+
+    for d in new_distances:
+        idx = np.searchsorted(distances, d)
+        if idx == 0:
+            sampled_path.append(path[0])
+        else:
+            t = (d - distances[idx - 1]) / (distances[idx] - distances[idx - 1])
+            point = (1 - t) * np.array(path[idx - 1]) + t * np.array(path[idx])
+            sampled_path.append(point)
+
+    return np.array(sampled_path)
 
 
 class GeneticModel:
@@ -14,14 +38,14 @@ class GeneticModel:
         target_path,
         num_magnets=5,
         force_magnitude=50,
-        time_step=0.0001,
+        time_step=0.01,
         mass=1,
     ):
         # GA params
         self.population_size = 100
         self.elitism_count = int(self.population_size * 0.1)
         self.crossover_rate = 0.4
-        self.mutation_rate = 0.1
+        self.mutation_rate = 0.9
         self.mutation_magnitude = 1
         self.stagnation_limit = 100
         self.generation = 0
@@ -52,7 +76,7 @@ class GeneticModel:
                 {"generation": self.generation, "fitness": float(fitness_score)}
             )
 
-    def train(self, generations=1):
+    def evolutionary_algo(self, generations=10_000):
         self.best_fitness = -np.inf
         self.best_individual: Chromosome = None
         generations_without_improvement = 0
@@ -90,37 +114,27 @@ class GeneticModel:
             for i in range(0, len(parents), 2):
                 parent_1, parent_2 = parents[i], parents[i + 1]
                 child_1, child_2 = self.crossover(parent_1, parent_2)
-                new_population.extend([self.mutate(child_1), self.mutate(child_2)])
+                new_population.extend(
+                    [
+                        child_1.mutate(self.mutation_rate, self.mutation_magnitude),
+                        child_2.mutate(self.mutation_rate, self.mutation_magnitude),
+                    ]
+                )
 
             self.visualize_results()
             self.population = np.array(new_population)
 
     def fitness_function(self, chromosome: Chromosome):
-        # fitness = 0
         simulated_path = chromosome.simulate_path(self.target_path)
+        downscaled_path = sample_along_path(simulated_path, 100)
 
         # Convert paths to numpy arrays if they aren't already
         target_path_array = np.array(self.target_path)
-        simulated_path_array = np.array(simulated_path)
+        simulated_path_array = np.array(downscaled_path)
 
-        target_x = target_path_array[:, 0]
-        target_y = target_path_array[:, 1]
+        distance, _ = fastdtw(target_path_array, simulated_path_array, dist=euclidean)
 
-        simulated_x = simulated_path_array[:, 0]
-        simulated_y = simulated_path_array[:, 1]
-
-        distance_x, _ = dtw.warping_paths(target_x, simulated_x)
-        distance_y, _ = dtw.warping_paths(target_y, simulated_y)
-
-        total_distance = np.sqrt(distance_x**2 + distance_y**2)
-
-        # Normalized to 0 and 1
-        max_length = max(len(target_x), len(simulated_x))
-        normalized_distance = total_distance / (max_length * np.sqrt(2))
-
-        fitness = 1 - normalized_distance
-
-        return fitness
+        return 1 / distance
 
     def crossover(self, parent_1: Chromosome, parent_2: Chromosome):
         if np.random.random() < self.crossover_rate:
@@ -136,24 +150,22 @@ class GeneticModel:
             child1.magnets = (
                 parent_1.magnets[:crossover_point] + parent_2.magnets[crossover_point:]
             )
+            child1.actual_times = (
+                parent_1.actual_times[:crossover_point]
+                + parent_2.actual_times[crossover_point:]
+            )
 
             child2.magnets = (
                 parent_2.magnets[:crossover_point] + parent_1.magnets[crossover_point:]
+            )
+            child2.actual_times = (
+                parent_2.actual_times[:crossover_point]
+                + parent_1.actual_times[crossover_point:]
             )
         else:
             child1, child2 = copy.deepcopy(parent_1), copy.deepcopy(parent_2)
 
         return child1, child2
-
-    def mutate(self, child: Chromosome):
-        limit = self.mutation_magnitude
-
-        for magnet in child.magnets:
-            if random.random() < self.mutation_rate:
-                magnet.x += random.uniform(-limit * 0.01, limit * 0.01)
-                magnet.y += random.uniform(-limit * 0.01, limit * 0.01)
-
-        return child
 
     def annotate_magnets(self, ax, magnets):
         magnet_x = [magnet.x for magnet in magnets]
@@ -193,6 +205,7 @@ class GeneticModel:
 
         plt.tight_layout()
         plt.savefig(f"results/{self.generation}.png")
+        plt.close()
         print(f"Saved {self.generation}")
 
     def save_results(self):
@@ -218,7 +231,8 @@ class GeneticModel:
             )
 
     def run(self):
-        self.train()
+        self.evolutionary_algo()
+        # self.differential_algo()
         self.save_results()
 
 
