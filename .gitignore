@@ -1,3 +1,5 @@
 venv/
 results/
-results.json
+
+__pycache__
+*.json

@@ -1,4 +1,4 @@
 numpy
-fastdtw
+dtaidistance
 scipy
 matplotlib
