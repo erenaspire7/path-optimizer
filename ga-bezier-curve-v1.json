@@ -2,11 +2,11 @@
   "best_individual": {
     "magnets": [
       {
-        "x": 1.2288687697657596,
-        "y": 6.217477501151249,
-        "magnetic_strength": 193.10585830943114,
+        "x": 2.136073976637821,
+        "y": 5.237520846097302,
+        "magnetic_strength": 212.47423872213074,
         "start_time": 0,
-        "end_time": 0.4996408123506492
+        "end_time": 0.8897213141014814
       },
       {
         "x": 5.052016053481457,
@@ -16,11 +16,11 @@
         "end_time": 1.9900000000000015
       },
       {
-        "x": 11.878928096750274,
-        "y": 7.404802361524142,
-        "magnetic_strength": 170.22577805057665,
+        "x": 10.610756341631584,
+        "y": 8.388561737283638,
+        "magnetic_strength": 255,
         "start_time": 1.9900000000000015,
-        "end_time": 7.319089566410453
+        "end_time": 6.39009497906374
       },
       {
         "x": 13.38101549300494,
@@ -38,11 +38,21 @@
       }
     ]
   },
-  "best_fitness": 0.9930659863619792,
-  "performance": [{ "generation": 1, "fitness": 0.9930659863619792 }],
+  "best_fitness": 0.987421964939472,
+  "performance": [
+    { "generation": 1, "fitness": 0.9415562901511998 },
+    { "generation": 10, "fitness": 0.9572901632120656 },
+    { "generation": 20, "fitness": 0.9805284946094098 },
+    { "generation": 30, "fitness": 0.9851704443663867 },
+    { "generation": 40, "fitness": 0.9869003526423048 },
+    { "generation": 50, "fitness": 0.9873243204415383 },
+    { "generation": 60, "fitness": 0.987397842721542 },
+    { "generation": 70, "fitness": 0.987421964939472 },
+    { "generation": 76, "fitness": 0.987421964939472 }
+  ],
   "params": {
-    "population_size": 10,
-    "differential_weight": 0.1,
+    "population_size": 25,
+    "differential_weight": 0.7,
     "crossover_rate": 0.8
   }
 }

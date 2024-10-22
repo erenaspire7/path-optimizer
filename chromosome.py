@@ -1,4 +1,4 @@
-from utils import MAX_STRENGTH, MASS, coordinate_percentage, round_based_on_value
+from utils import MAX_STRENGTH, MASS, smoothen_path
 
 import numpy as np
 from magnet import Magnet
@@ -14,41 +14,27 @@ class Chromosome:
             "magnets": [m.to_dict() for m in self.magnets],
         }
 
-    def calculate_curve_control_point(self, start, end, magnet):
+    def generate_arc(self, start, end, magnet, num_points=100):
         magnet_pos = np.array(magnet.to_tuple())
+        normalized_strength = magnet.magnetic_strength / MAX_STRENGTH
 
-        # Calculate the point on the line closest to the magnet
         line_vector = end - start
         t = np.dot(magnet_pos - start, line_vector) / np.dot(line_vector, line_vector)
-        t = max(0, min(1, t))  # Clamp t between 0 and 1
-        closest_point = start + t * line_vector
+        intersection_percent = np.clip(t, 0, 1)
 
-        direction_to_magnet = magnet_pos - closest_point
-        direction_to_magnet = direction_to_magnet / np.linalg.norm(direction_to_magnet)
+        closest_point = start + intersection_percent * line_vector
+        to_magnet = magnet_pos - closest_point
+        control_point = closest_point + normalized_strength * to_magnet
 
-        # Adjust curve based on magnet strength and distance
-        curve_factor = magnet.magnetic_strength / MAX_STRENGTH
-        distance_factor = 1 / (
-            1 + np.linalg.norm(magnet_pos - closest_point)
-        )  # Inverse distance
-        max_curve_distance = np.linalg.norm(end - start) / 2
-        curve_distance = curve_factor * distance_factor * max_curve_distance
-
-        # Calculate control point
-        control_point = closest_point + direction_to_magnet * curve_distance
-
-        return control_point, t
-
-    def generate_bezier_curve(self, start, control, end, num_points=100):
-        curve = []
+        arc_points = []
         for t in np.linspace(0, 1, num_points):
-            point = (1 - t) ** 2 * start + 2 * (1 - t) * t * control + t**2 * end
-            curve.append(point)
-        return curve
+            point = (1 - t) ** 2 * start + 2 * (1 - t) * t * control_point + t**2 * end
+            arc_points.append(point)
+
+        return smoothen_path(arc_points), intersection_percent
 
     def simulate_path(self, target_path):
         start = target_path[0]
-        end = target_path[-1]
         ball_pos = np.array(start)
         simulated_path = [ball_pos]
 
@@ -100,16 +86,12 @@ class Chromosome:
                         end_pos = simulated_path[-1]
                         curve_magnet = self.magnets[idx - 1]
 
-                        curve_control, percent = self.calculate_curve_control_point(
+                        curved_path, percent = self.generate_arc(
                             start_pos, end_pos, curve_magnet
                         )
 
                         duration = m.end_time - m.start_time
                         curve_end_time = (duration * percent) + m.start_time
-
-                        curved_path = self.generate_bezier_curve(
-                            start_pos, curve_control, end_pos
-                        )
 
                         start_idx = np.where((simulated_path == start_pos).all(axis=1))[
                             0
@@ -130,34 +112,3 @@ class Chromosome:
                 simulated_path.append(ball_pos.copy())
 
         return simulated_path
-
-        # for
-
-        # Calculate the bounding box of the target path
-        # x_min = min(point[0] for point in target_path)
-        # x_max = max(point[0] for point in target_path)
-        # y_min = min(point[1] for point in target_path)
-        # y_max = max(point[1] for point in target_path)
-
-        # margin = 0.1  # 10% margin
-        # x_range = x_max - x_min
-        # y_range = y_max - y_min
-        # x_min -= margin * x_range
-        # x_max += margin * x_range
-        # y_min -= margin * y_range
-        # y_max += margin * y_range
-
-        #         # Check if the ball has overshot the bounding box
-        #         if (
-        #             ball_pos[0] < x_min
-        #             or ball_pos[0] > x_max
-        #             or ball_pos[1] < y_min
-        #             or ball_pos[1] > y_max
-        #         ):
-        #             return simulated_path
-
-        #         if (
-        #             np.dot(ball_pos - np.array(end), np.array(end) - np.array(start))
-        #             >= 0
-        #         ):
-        #             return simulated_path

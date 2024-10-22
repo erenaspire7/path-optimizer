@@ -197,11 +197,21 @@ def path_similarity(path1, path2):
     return similarity
 
 
+def curvature_similarity(path1, path2):
+    curvature1 = calculate_curvature(*zip(*path1))
+    curvature2 = calculate_curvature(*zip(*path2))
+    curvature_diff = np.abs(np.array(curvature1) - np.array(curvature2))
+    return 1 - np.mean(curvature_diff)
+
+
 def fitness_function(chromosome, target_path):
     simulated_path = chromosome.simulate_path(target_path)
     simulated_path = sample_along_path(simulated_path)
 
-    return path_similarity(target_path, simulated_path)
+    path_sim = path_similarity(target_path, simulated_path)
+    curve_sim = curvature_similarity(target_path, simulated_path)
+
+    return 0.5 * path_sim + 0.5 * curve_sim
 
 
 def annotate_magnets(ax, magnets):
@@ -244,51 +254,3 @@ def visualize_results(target_path, chromosome, generation):
     plt.savefig(f"results/{generation}.png")
     plt.close()
     print(f"Saved {generation}")
-
-
-# def fitness_function(chromosome, target_path):
-#     simulated_path = chromosome.simulate_path(target_path)
-
-#     # Sample the target path
-#     target_path = sample_along_path(target_path)
-
-#     # Handle case where simulated path is shorter
-#     if len(simulated_path) < len(target_path):
-#         # Pad the simulated path with its last point
-#         simulated_path = np.pad(
-#             simulated_path,
-#             ((0, len(target_path) - len(simulated_path)), (0, 0)),
-#             mode="edge",
-#         )
-#     else:
-#         # If simulated path is longer, truncate it
-#         simulated_path = sample_along_path(simulated_path, num_points=len(target_path))
-
-#     # Convert paths to numpy arrays
-#     target_arr = np.array(target_path)
-#     simulated_arr = np.array(simulated_path)
-
-#     # Calculate Euclidean distances between corresponding points
-#     distances = np.linalg.norm(target_arr - simulated_arr, axis=1)
-
-#     # Calculate the mean distance
-#     mean_distance = np.mean(distances)
-
-#     # Calculate the completion ratio
-#     completion_ratio = min(len(simulated_path) / len(target_path), 1.0)
-
-#     # Calculate the endpoint distance
-#     endpoint_distance = np.linalg.norm(target_arr[-1] - simulated_arr[-1])
-
-#     # Normalize the similarity score
-#     max_possible_distance = np.linalg.norm(np.ptp(target_arr, axis=0))
-#     path_similarity = 1 - (mean_distance / (max_possible_distance + 1e-5))
-
-#     # Combine factors into a final fitness score
-#     fitness = (
-#         0.5 * path_similarity
-#         + 0.3 * completion_ratio
-#         + 0.2 * (1 - endpoint_distance / max_possible_distance)
-#     )
-
-#     return fitness
