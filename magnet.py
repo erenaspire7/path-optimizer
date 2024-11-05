@@ -8,7 +8,7 @@ class Magnet:
         self.curve_point = curve_point
 
         if curve_point:
-            self.magnetic_strength = random.uniform(0, 255)
+            self.magnetic_strength = random.randint(0, 255)
         else:
             self.magnetic_strength = 255
 

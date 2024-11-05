@@ -143,6 +143,7 @@ class DifferentialModel:
                         "differential_weight": self.F,
                         "crossover_rate": self.CR,
                     },
+                    "target_path": [{"x": x, "y": y} for x, y in self.target_path],
                 },
                 json_file,
             )

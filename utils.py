@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 from scipy.interpolate import CubicSpline
 from scipy.signal import find_peaks
 
-MASS = 0.0005  # kg
-MAX_STRENGTH = 255
+MASS = 1  # kg
+MAX_STRENGTH = 255  # percent
 
 
 def detect_curves(path, threshold=0.01):

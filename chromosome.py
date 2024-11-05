@@ -31,7 +31,24 @@ class Chromosome:
             point = (1 - t) ** 2 * start + 2 * (1 - t) * t * control_point + t**2 * end
             arc_points.append(point)
 
-        return smoothen_path(arc_points), intersection_percent
+        return arc_points, intersection_percent
+
+    def handle_curved_simulation(self, start_pos, simulated_path, idx):
+        end_pos = simulated_path[-1]
+        curve_magnet = self.magnets[idx - 1]
+        m = self.magnets[idx]
+
+        curved_path, percent = self.generate_arc(start_pos, end_pos, curve_magnet)
+
+        duration = m.end_time - m.start_time
+        curve_end_time = (duration * percent) + m.start_time
+
+        start_idx = np.where((simulated_path == start_pos).all(axis=1))[0][0]
+        end_idx = np.where((simulated_path == end_pos).all(axis=1))[0][0]
+
+        simulated_path[start_idx:end_idx] = curved_path
+        curve_magnet.start_time = m.start_time
+        curve_magnet.end_time = curve_end_time
 
     def simulate_path(self, target_path):
         start = target_path[0]
@@ -59,9 +76,8 @@ class Chromosome:
                 total_force = np.zeros(2)
 
                 if dist > 0:
-                    force_magnitude = (
-                        5.12e-9 * m.magnetic_strength / MAX_STRENGTH
-                    ) / pow(((dist / 100) + 0.004), 4)
+                    normalized_strength = m.magnetic_strength / MAX_STRENGTH
+                    force_magnitude = (normalized_strength) / (dist * dist)
                     force = force_magnitude * direction / dist
                     total_force += force
 
@@ -83,27 +99,7 @@ class Chromosome:
                     m.deactivate(total_time)
 
                     if self.magnets[idx - 1].curve_point:
-                        end_pos = simulated_path[-1]
-                        curve_magnet = self.magnets[idx - 1]
-
-                        curved_path, percent = self.generate_arc(
-                            start_pos, end_pos, curve_magnet
-                        )
-
-                        duration = m.end_time - m.start_time
-                        curve_end_time = (duration * percent) + m.start_time
-
-                        start_idx = np.where((simulated_path == start_pos).all(axis=1))[
-                            0
-                        ][0]
-                        end_idx = np.where((simulated_path == end_pos).all(axis=1))[0][
-                            0
-                        ]
-
-                        simulated_path[start_idx:end_idx] = curved_path
-
-                        curve_magnet.start_time = m.start_time
-                        curve_magnet.end_time = curve_end_time
+                        self.handle_curved_simulation(start_pos, simulated_path, idx)
 
                     break
 
